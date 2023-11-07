@@ -14,7 +14,9 @@ type Repository interface {
 	GetAlltask(id int) ([]model.TaskRes, error)
 	GetTaskById(id int, taskId int) (model.TaskRes, error)
 	CreateTask(arg model.TaskReq, parsedDate time.Time, imageURL string, id int) (model.TaskRes, error)
+	UpdateTasks(arg model.TaskReq, parseDate time.Time, ImageURL string, id int) (model.TaskRes, error)
 	DeleteTask(Id int) error
+	BulkDeleteTask(taskIds []int, Id int) error
 	Login(email string) (model.LoginRes, error)
 	SaveToken(token string, userId int) error
 }
@@ -107,7 +109,6 @@ func (r *repository) GetAlltask(id int) ([]model.TaskRes, error) {
 	return tasks, nil
 }
 
-
 func (r *repository) CreateTask(arg model.TaskReq, parsedDate time.Time, imageURL string, id int) (model.TaskRes, error) {
 	var (
 		db   = r.db
@@ -120,8 +121,27 @@ func (r *repository) CreateTask(arg model.TaskReq, parsedDate time.Time, imageUR
 		RETURNING id, title, description, status, date, image, created_at, updated_at, id_user, category_id, important
 		`
 
-	row := db.QueryRowx(query, arg.Title, arg.Description, arg.Status, parsedDate, imageURL, id, arg.CategoryId, arg.Important)
-	err := row.Scan(&task.Id, &task.Title, &task.Description, &task.Status, &task.Date, &task.Image, &task.CreatedAt, &task.UpdatedAt, &task.IdUser, &task.CategoryId, &task.Important)
+	rows := db.QueryRowx(query, arg.Title, arg.Description, arg.Status, parsedDate, imageURL, id, arg.CategoryId, arg.Important)
+	err := rows.Scan(&task.Id, &task.Title, &task.Description, &task.Status, &task.Date, &task.Image, &task.CreatedAt, &task.UpdatedAt, &task.IdUser, &task.CategoryId, &task.Important)
+	if err != nil {
+		return model.TaskRes{}, err
+	}
+
+	return task, nil
+}
+
+func (r *repository) UpdateTasks(arg model.TaskReq, parseDate time.Time, imageURL string, id int) (model.TaskRes, error) {
+	var (
+		db   = r.db
+		task = model.TaskRes{}
+	)
+
+	query := `UPDATE tasks SET title = $1, description = $2, status = $3, date = $4, image = $5, updated_at = now(), id_user = $6, category_id = $7, important = $8
+		WHERE id = $9 AND id_user = $10
+		RETURNING id, title, description, status, date, image, created_at, updated_at, id_user, category_id, important`
+
+	rows := db.QueryRowx(query, arg.Title, arg.Description, arg.Status, parseDate, imageURL, id, arg.CategoryId, arg.Important, id, id)
+	err := rows.Scan(&task.Id, &task.Title, &task.Description, &task.Status, &task.Date, &task.Image, &task.CreatedAt, &task.UpdatedAt, &task.IdUser, &task.CategoryId, &task.Important)
 	if err != nil {
 		return model.TaskRes{}, err
 	}
@@ -136,6 +156,19 @@ func (r *repository) DeleteTask(Id int) error {
 	_, err := db.Exec(query, Id)
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+func (r *repository) BulkDeleteTask(taskIds []int, Id int) error {
+	var db = r.db
+
+	for _, taskId := range taskIds {
+		query := `DELETE FROM tasks WHERE id = $1 AND id_user = $2`
+		_, err := db.Exec(query, taskId, Id)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -162,7 +195,6 @@ func (r *repository) SaveToken(token string, userId int) error {
 
 	return nil
 }
-
 
 func (r *repository) GetTaskById(id int, taskId int) (model.TaskRes, error) {
 	var (

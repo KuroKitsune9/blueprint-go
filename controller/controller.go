@@ -14,6 +14,7 @@ import (
 	"Users/helpers"
 	"Users/model"
 	"Users/service"
+
 )
 
 type Controller struct {
@@ -118,6 +119,65 @@ func (c *Controller) CreateTasksController(ctx echo.Context) error {
 	})
 }
 
+func (c *Controller) UpdateTaskController(ctx echo.Context) error {
+	var req model.TaskReq
+
+	err := ctx.Bind(&req)
+	if err != nil {
+		return err
+	}
+	// Menerima file gambar dari form dengan nama "image"
+	image, err := ctx.FormFile("image")
+	if err != nil {
+		return ctx.JSON(http.StatusBadRequest, map[string]string{"error": "Tidak dapat memproses file gambar"})
+	}
+
+	// Buka file yang diunggah
+	src, err := image.Open()
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "Gagal membuka file gambar"})
+	}
+	defer src.Close()
+
+	// Lokasi penyimpanan file gambar lokal
+	uploadDir := "uploads"
+	if err := os.MkdirAll(uploadDir, os.ModePerm); err != nil {
+		return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "Gagal membuat direktori penyimpanan"})
+	}
+
+	// Generate nama file unik
+	dstPath := filepath.Join(uploadDir, image.Filename)
+
+	// Membuka file tujuan untuk penyimpanan
+	dst, err := os.Create(dstPath)
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "Gagal membuat file gambar"})
+	}
+	defer dst.Close()
+
+	// Salin isi file dari file asal ke file tujuan
+	if _, err = io.Copy(dst, src); err != nil {
+		return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "Gagal menyalin file gambar"})
+	}
+
+	// Membuat URL ke gambar yang diunggah
+	imageURL := "http://localhost:8080/uploads/" + image.Filename
+
+	Claims := helpers.ClaimToken(ctx)
+	Id := Claims.ID
+
+	// validate .......
+	task, err := c.service.UpdateTask(req, imageURL, Id)
+	if err != nil {
+		return err
+	}
+
+	return ctx.JSON(http.StatusOK, map[string]interface{}{
+		"task":    task,
+		"message": "successfully updated task",
+	})
+}
+
 func (c *Controller) DeleteTasksController(ctx echo.Context) error {
 	Id := ctx.Param("id")
 	IdAsli, err := strconv.Atoi(Id)
@@ -132,6 +192,27 @@ func (c *Controller) DeleteTasksController(ctx echo.Context) error {
 
 	return ctx.JSON(http.StatusOK, map[string]interface{}{
 		"message": "Task deleted successfully",
+	})
+}
+
+func (c *Controller) BulkDeleteTask(ctx echo.Context) error {
+	Claims := helpers.ClaimToken(ctx)
+	Id := Claims.ID
+
+	var req model.BulkDelete
+	if err := ctx.Bind(&req); err != nil {
+		return err
+	}
+
+	taskIds := req.ID
+
+	err := c.service.BulkDeleteTask(taskIds, Id)
+	if err != nil {
+		return err
+	}
+
+	return ctx.JSON(http.StatusOK, map[string]interface{}{
+		"message": "success delete multiple tasks",
 	})
 }
 

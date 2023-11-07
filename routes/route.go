@@ -41,6 +41,8 @@ func Init() error {
 	task.DELETE("/:id", controller.DeleteTasksController)
 	task.GET("", controller.GetAlltaskController)
 	task.GET("/:id", controller.GetTaskById)
+	task.PUT("/:id", controller.UpdateTaskController)
+	task.DELETE("", controller.BulkDeleteTask)
 
 	e.POST("/login", controller.Login)
 
