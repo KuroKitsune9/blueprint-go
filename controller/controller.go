@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt"
@@ -14,7 +15,6 @@ import (
 	"Users/helpers"
 	"Users/model"
 	"Users/service"
-
 )
 
 type Controller struct {
@@ -216,6 +216,24 @@ func (c *Controller) BulkDeleteTask(ctx echo.Context) error {
 	})
 }
 
+func (c *Controller) RegisterController(ctx echo.Context) error {
+	var req model.UserRegis
+	err := ctx.Bind(&req)
+	if err != nil {
+		return err
+	}
+
+	data, err := c.service.Regis(req.Email, req.Password)
+	if err != nil {
+		return err
+	}
+
+	return ctx.JSON(http.StatusOK, map[string]interface{}{
+		"Message": "Register Successful",
+		"data":    data,
+	})
+}
+
 func (c *Controller) Login(ctx echo.Context) error {
 	var req model.LoginRequest
 	err := ctx.Bind(&req)
@@ -256,6 +274,42 @@ func (c *Controller) Login(ctx echo.Context) error {
 	return ctx.JSON(http.StatusOK, map[string]interface{}{
 		"token":   token,
 		"message": "success Login",
+		"data":    data,
+	})
+}
+
+func (c *Controller) Logout(ctx echo.Context) error {
+	var reqToken string
+	headerDataToken := ctx.Request().Header.Get("Authorization")
+
+	splitToken := strings.Split(headerDataToken, "Bearer ")
+	if len(splitToken) > 1 {
+		reqToken = splitToken[1]
+	} else {
+		return echo.NewHTTPError(http.StatusUnauthorized)
+	}
+
+	err := c.service.Logout(reqToken)
+	if err != nil {
+		return err
+	}
+
+	return ctx.JSON(http.StatusOK, map[string]interface{}{
+		"messgae": "logout successfully",
+	})
+}
+
+func (c *Controller) CountTask(ctx echo.Context) error {
+	claims := helpers.ClaimToken(ctx)
+	id := claims.ID
+
+	data, err := c.service.CountTask(id)
+	if err != nil {
+		return err
+	}
+
+	return ctx.JSON(http.StatusOK, map[string]interface{}{
+		"message": "Successfully count",
 		"data":    data,
 	})
 }

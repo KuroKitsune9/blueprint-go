@@ -17,7 +17,10 @@ type Service interface {
 	DeleteTask(Id int) error
 	BulkDeleteTask(taskIds []int, Id int) error
 	Login(email string, password string) (model.LoginRes, error)
+	Regis(email string, password string) (model.UserRegisRespon, error)
+	Logout(reqToken string) error
 	SaveToken(token string, userId int) error
+	CountTask(Id int) (model.Count, error)
 }
 
 type service struct {
@@ -94,6 +97,20 @@ func (s *service) BulkDeleteTask(taskIds []int, Id int) error {
 	return nil
 }
 
+func (s *service) Regis(email string, password string) (model.UserRegisRespon, error) {
+
+	HasPassword, err := helpers.HashPassword(password)
+	if err != nil {
+		return model.UserRegisRespon{}, err
+	}
+
+	data, err := s.repository.Regis(email, HasPassword)
+	if err != nil {
+		return model.UserRegisRespon{}, err
+	}
+	return data, nil
+}
+
 func (s *service) Login(email string, password string) (model.LoginRes, error) {
 	data, err := s.repository.Login(email)
 	if err != nil {
@@ -123,6 +140,24 @@ func (s *service) GetTaskById(id int, taskId int) (model.TaskRes, error) {
 	data, err := s.repository.GetTaskById(id, taskId)
 	if err != nil {
 		return model.TaskRes{}, err
+	}
+
+	return data, nil
+}
+
+func (s *service) Logout(reqToken string) error {
+	err := s.repository.Logout(reqToken)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *service) CountTask(Id int) (model.Count, error) {
+	data, err := s.repository.CountTask(Id)
+	if err != nil {
+		return model.Count{}, err
 	}
 
 	return data, nil

@@ -12,6 +12,7 @@ import (
 	mid "Users/middleware"
 	"Users/repository"
 	"Users/service"
+
 )
 
 func Init() error {
@@ -43,8 +44,11 @@ func Init() error {
 	task.GET("/:id", controller.GetTaskById)
 	task.PUT("/:id", controller.UpdateTaskController)
 	task.DELETE("", controller.BulkDeleteTask)
+	task.GET("/count", controller.CountTask)
 
 	e.POST("/login", controller.Login)
+	e.POST("/logout", controller.Logout)
+	e.POST("/register", controller.RegisterController)
 
 	return e.Start(fmt.Sprintf(":%s", os.Getenv("SERVER_PORT")))
 }

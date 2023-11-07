@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -17,8 +18,11 @@ type Repository interface {
 	UpdateTasks(arg model.TaskReq, parseDate time.Time, ImageURL string, id int) (model.TaskRes, error)
 	DeleteTask(Id int) error
 	BulkDeleteTask(taskIds []int, Id int) error
+	Regis(email string, HasPassword string) (model.UserRegisRespon, error)
 	Login(email string) (model.LoginRes, error)
+	Logout(reqToken string) error
 	SaveToken(token string, userId int) error
+	CountTask(Id int) (model.Count, error)
 }
 
 type repository struct {
@@ -173,6 +177,25 @@ func (r *repository) BulkDeleteTask(taskIds []int, Id int) error {
 	return nil
 }
 
+func (r *repository) Regis(email string, HasPassword string) (model.UserRegisRespon, error) {
+	var db = r.db
+	var regis = model.UserRegisRespon{}
+
+	fmt.Println(email, HasPassword)
+	query := `
+		INSERT INTO users (email, password,ted_at)
+		VALUES ( $1, $2, now()) crea
+		RETURNING id, email, created_at`
+
+	row := db.QueryRowx(query, email, HasPassword)
+	err := row.Scan(&regis.ID, &regis.Email, &regis.CreatedAt)
+	if err != nil {
+		return model.UserRegisRespon{}, err
+	}
+
+	return regis, nil
+}
+
 func (r *repository) Login(email string) (model.LoginRes, error) {
 	var db = r.db
 	var login = model.LoginRes{}
@@ -227,4 +250,39 @@ func (r *repository) GetTaskById(id int, taskId int) (model.TaskRes, error) {
 	}
 
 	return tasks, err
+}
+
+func (r *repository) Logout(reqToken string) error {
+	var (
+		db = r.db
+	)
+
+	query := `DELETE FROM user_token WHERE token = $1`
+
+	_, err := db.Exec(query, reqToken)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *repository) CountTask(Id int) (model.Count, error) {
+	var (
+		db    = r.db
+		count = model.Count{}
+	)
+
+	query := `SELECT 
+				SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending,
+				SUM(CASE WHEN status = 'progress' THEN 1 ELSE 0 END) AS progress,
+				SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END) AS done
+			FROM tasks 
+			WHERE id_user = $1`
+
+	err := db.Get(&count, query, Id)
+	if err != nil {
+		return model.Count{}, err
+	}
+
+	return count, err
 }
