@@ -12,7 +12,6 @@ import (
 	mid "Users/middleware"
 	"Users/repository"
 	"Users/service"
-
 )
 
 func Init() error {
@@ -45,6 +44,7 @@ func Init() error {
 	task.PUT("/:id", controller.UpdateTaskController)
 	task.DELETE("", controller.BulkDeleteTask)
 	task.GET("/count", controller.CountTask)
+	task.POST("/search", controller.SearchTasksFormController)
 
 	e.POST("/login", controller.Login)
 	e.POST("/logout", controller.Logout)

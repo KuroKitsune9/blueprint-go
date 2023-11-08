@@ -20,6 +20,8 @@ type Service interface {
 	Regis(email string, password string) (model.UserRegisRespon, error)
 	Logout(reqToken string) error
 	SaveToken(token string, userId int) error
+	CountTasks(id int, keywoard string, parsedDate time.Time) (int, error)
+	SearchTasks(id int, keywoard string, parsedDate time.Time, limit, offset int) ([]model.TaskRes, error)
 	CountTask(Id int) (model.Count, error)
 }
 
@@ -152,6 +154,24 @@ func (s *service) Logout(reqToken string) error {
 	}
 
 	return nil
+}
+
+func (s *service) CountTasks(id int, keywoard string, parsedDate time.Time) (int, error) {
+	data, err := s.repository.CountTasks(id, keywoard, parsedDate)
+	if err != nil {
+		return data, err
+	}
+
+	return data, nil
+}
+
+func (s *service) SearchTasks(id int, keywoard string, parsedDate time.Time, limit, offset int) ([]model.TaskRes, error) {
+	data, err := s.repository.SearchTasks(id, keywoard, parsedDate, limit, offset)
+	if err != nil {
+		return []model.TaskRes{}, err
+	}
+
+	return data, nil
 }
 
 func (s *service) CountTask(Id int) (model.Count, error) {

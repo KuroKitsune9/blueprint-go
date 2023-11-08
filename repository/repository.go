@@ -7,7 +7,6 @@ import (
 	"github.com/jmoiron/sqlx"
 
 	"Users/model"
-
 )
 
 type Repository interface {
@@ -22,6 +21,8 @@ type Repository interface {
 	Login(email string) (model.LoginRes, error)
 	Logout(reqToken string) error
 	SaveToken(token string, userId int) error
+	CountTasks(id int, keywoard string, parsedDate time.Time) (int, error)
+	SearchTasks(id int, keywoard string, parsedDate time.Time, limit, offset int) ([]model.TaskRes, error)
 	CountTask(Id int) (model.Count, error)
 }
 
@@ -183,8 +184,8 @@ func (r *repository) Regis(email string, HasPassword string) (model.UserRegisRes
 
 	fmt.Println(email, HasPassword)
 	query := `
-		INSERT INTO users (email, password,ted_at)
-		VALUES ( $1, $2, now()) crea
+		INSERT INTO users (email, password, created_at)
+		VALUES ( $1, $2, now())
 		RETURNING id, email, created_at`
 
 	row := db.QueryRowx(query, email, HasPassword)
@@ -195,7 +196,6 @@ func (r *repository) Regis(email string, HasPassword string) (model.UserRegisRes
 
 	return regis, nil
 }
-
 func (r *repository) Login(email string) (model.LoginRes, error) {
 	var db = r.db
 	var login = model.LoginRes{}
@@ -264,6 +264,79 @@ func (r *repository) Logout(reqToken string) error {
 		return err
 	}
 	return nil
+}
+
+func (r *repository) CountTasks(id int, keywoard string, parsedDate time.Time) (int, error) {
+	var (
+		db = r.db
+	)
+	totalQuery := `SELECT COUNT(*) FROM tasks WHERE id_user = $1`
+
+	if !parsedDate.IsZero() {
+		totalQuery += fmt.Sprintf(" AND date::date = '%s'", parsedDate.Format("2006-01-02"))
+	}
+
+	if keywoard != "" {
+		totalQuery += fmt.Sprintf(" AND (tittle ILIKE '%s' OR description ILIKE '%s')", keywoard, keywoard)
+	}
+
+	var count int
+	err := db.Get(&count, totalQuery, id)
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
+func (r *repository) SearchTasks(id int, keywoard string, parsedDate time.Time, limit, offset int) ([]model.TaskRes, error) {
+	var (
+		db = r.db
+	)
+
+	query := `SELECT id, tittle, description, status, date, image, created_at, updated_at, id_user FROM tasks WHERE id_user = $1`
+
+	keywoard = "%" + keywoard + "%"
+
+	if !parsedDate.IsZero() {
+		query += fmt.Sprintf(" AND date::date = '%s'", parsedDate.Format("2006-01-02"))
+	}
+
+	if keywoard != "" {
+		query += fmt.Sprintf(" AND (tittle ILIKE '%s' OR description ILIKE '%s')", keywoard, keywoard)
+	}
+
+	query += " LIMIT $2 OFFSET $3"
+
+	rows, err := db.Query(query, id, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []model.TaskRes
+
+	for rows.Next() {
+		var user model.TaskRes
+		err = rows.Scan(
+			&user.Id,
+			&user.Title,
+			&user.Description,
+			&user.Status,
+			&user.Date,
+			&user.Image,
+			&user.CreatedAt,
+			&user.UpdatedAt,
+			&user.IdUser,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		users = append(users, user)
+	}
+
+	return users, nil
 }
 
 func (r *repository) CountTask(Id int) (model.Count, error) {

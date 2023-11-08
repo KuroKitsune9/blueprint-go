@@ -299,6 +299,59 @@ func (c *Controller) Logout(ctx echo.Context) error {
 	})
 }
 
+func (c *Controller) SearchTasksFormController(ctx echo.Context) (err error) {
+	Claims := helpers.ClaimToken(ctx)
+	id := Claims.ID
+	keywoard := ctx.QueryParam("search")
+	dateStr := ctx.QueryParam("date")
+	var parsedDate time.Time
+	if dateStr != "" {
+		parsedDate, err = time.Parse("2006-01-02", dateStr)
+		if err != nil {
+			return err
+		}
+	}
+
+	limit, err := strconv.Atoi(ctx.QueryParam("limit"))
+	if err != nil {
+		limit = 10
+	}
+
+	page, err := strconv.Atoi(ctx.QueryParam("page"))
+	if err != nil {
+		page = 1
+	}
+
+	offset := (page - 1) * limit
+
+	users, err := c.service.SearchTasks(id, keywoard, parsedDate, limit, offset)
+	if err != nil {
+		return err
+	}
+
+	count, err := c.service.CountTasks(id, keywoard, parsedDate)
+	if err != nil {
+		return err
+	}
+
+	totalPages := count / limit
+	if count%limit != 0 {
+		totalPages++
+	}
+
+	if len(users) == 0 {
+		users = []model.TaskRes{}
+	}
+	return ctx.JSON(http.StatusOK, map[string]interface{}{
+		"Message":     "Success Search Tasks for User",
+		"data":        users,
+		"page":        page,
+		"limit_page":  limit,
+		"total_data":  count,
+		"total_pages": totalPages,
+	})
+}
+
 func (c *Controller) CountTask(ctx echo.Context) error {
 	claims := helpers.ClaimToken(ctx)
 	id := claims.ID
