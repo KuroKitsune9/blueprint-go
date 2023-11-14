@@ -16,6 +16,7 @@ import (
 	"Users/helpers"
 	"Users/model"
 	"Users/service"
+
 )
 
 type Controller struct {
@@ -423,7 +424,7 @@ func (c *Controller) ResetPassword(ctx echo.Context) error {
 		return err
 	}
 
-	err = c.service.DeleteToken(data.Token)
+	err = c.service.DeleteToken(req.Token)
 	if err != nil {
 		return err
 	}
