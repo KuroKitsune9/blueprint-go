@@ -23,6 +23,11 @@ type Service interface {
 	CountTasks(id int, keywoard string, parsedDate time.Time) (int, error)
 	SearchTasks(id int, keywoard string, parsedDate time.Time, limit, offset int) ([]model.TaskRes, error)
 	CountTask(Id int) (model.Count, error)
+	GetUserByEmail(email string) (user model.User, err error)
+	StoreToken(token string, expirationTime time.Time, id int) (err error)
+	CekToken(token string) (data model.ForgotPassword, err error)
+	ResetPassword(Password string, Id int) error
+	DeleteToken(token string) error
 }
 
 type service struct {
@@ -147,6 +152,15 @@ func (s *service) GetTaskById(id int, taskId int) (model.TaskRes, error) {
 	return data, nil
 }
 
+func (s *service) GetUserByEmail(email string) (user model.User, err error) {
+	data, err := s.repository.GetUserByEmail(email)
+	if err != nil {
+		return user, err
+	}
+
+	return data, nil
+}
+
 func (s *service) Logout(reqToken string) error {
 	err := s.repository.Logout(reqToken)
 	if err != nil {
@@ -181,4 +195,44 @@ func (s *service) CountTask(Id int) (model.Count, error) {
 	}
 
 	return data, nil
+}
+
+func (s *service) StoreToken(token string, expirationTime time.Time, id int) (err error) {
+	err = s.repository.StoreToken(token, expirationTime, id)
+	if err != nil {
+		return err
+	}
+
+	return
+}
+
+func (s *service) CekToken(token string) (data model.ForgotPassword, err error) {
+	data, err = s.repository.CekToken(token)
+	if err != nil {
+		return
+	}
+
+	return
+}
+
+func (s *service) ResetPassword(Password string, Id int) error {
+	HasPassword, err := helpers.HashPassword(Password)
+	if err != nil {
+		return err
+	}
+
+	err = s.repository.ResetPassword(HasPassword, Id)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *service) DeleteToken(token string) error {
+	err := s.repository.DeleteToken(token)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

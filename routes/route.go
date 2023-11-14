@@ -12,6 +12,7 @@ import (
 	mid "Users/middleware"
 	"Users/repository"
 	"Users/service"
+
 )
 
 func Init() error {
@@ -47,6 +48,8 @@ func Init() error {
 	task.POST("/search", controller.SearchTasksFormController)
 
 	e.POST("/login", controller.Login)
+	e.POST("/forget-password", controller.ForgotPasswordHandler)
+	e.POST("/reset-password", controller.ResetPassword)
 	e.POST("/logout", controller.Logout)
 	e.POST("/register", controller.RegisterController)
 

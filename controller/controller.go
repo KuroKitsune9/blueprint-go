@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -364,5 +365,70 @@ func (c *Controller) CountTask(ctx echo.Context) error {
 	return ctx.JSON(http.StatusOK, map[string]interface{}{
 		"message": "Successfully count",
 		"data":    data,
+	})
+}
+
+func (c *Controller) ForgotPasswordHandler(ctx echo.Context) error {
+	email := ctx.FormValue("email")
+
+	if email == "" {
+		return ctx.JSON(http.StatusBadRequest, map[string]string{"error": "Email tidak valid"})
+	}
+
+	user, err := c.service.GetUserByEmail(email)
+	if err != nil {
+		return ctx.JSON(http.StatusBadRequest, map[string]string{"error": "User tidak valid"})
+	}
+
+	token, err := helpers.GenerateRandomToken(50)
+	if err != nil {
+		return ctx.JSON(http.StatusBadRequest, map[string]string{"error": "user tidak valid"})
+	}
+
+	expireTime := time.Now().Add(1 * time.Hour)
+
+	if err := helpers.SendResetPasswordEmail(email, token); err != nil {
+		return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "Gagal mengirim email"})
+	}
+
+	err = c.service.StoreToken(token, expireTime, int(user.Id))
+	if err != nil {
+		return err
+	}
+
+	return ctx.JSON(http.StatusOK, map[string]string{"message": fmt.Sprintf("Tautan reset password dikirim ke %s", email)})
+}
+
+func (c *Controller) ResetPassword(ctx echo.Context) error {
+	var req model.ResetPassword
+	err := ctx.Bind(&req)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(req.Password)
+	data, err := c.service.CekToken(req.Token)
+	if err != nil {
+		return err
+	}
+
+	if !data.ExpiredAt.Before(time.Now()) {
+		return ctx.JSON(http.StatusUnauthorized, map[string]interface{}{
+			"message": "you are not allowed",
+		})
+	}
+
+	err = c.service.ResetPassword(req.Password, data.UserId)
+	if err != nil {
+		return err
+	}
+
+	err = c.service.DeleteToken(data.Token)
+	if err != nil {
+		return err
+	}
+
+	return ctx.JSON(http.StatusOK, map[string]interface{}{
+		"message": "your password has been updated",
 	})
 }

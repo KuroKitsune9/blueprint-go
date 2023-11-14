@@ -24,6 +24,12 @@ type Repository interface {
 	CountTasks(id int, keywoard string, parsedDate time.Time) (int, error)
 	SearchTasks(id int, keywoard string, parsedDate time.Time, limit, offset int) ([]model.TaskRes, error)
 	CountTask(Id int) (model.Count, error)
+	getUserIDByEmail(email string) (int, error)
+	GetUserByEmail(email string) (user model.User, err error)
+	StoreToken(token string, expirationTime time.Time, id int) (err error)
+	CekToken(token string) (data model.ForgotPassword, err error)
+	ResetPassword(Password string, Id int) error
+	DeleteToken(token string) error
 }
 
 type repository struct {
@@ -252,6 +258,24 @@ func (r *repository) GetTaskById(id int, taskId int) (model.TaskRes, error) {
 	return tasks, err
 }
 
+func (r *repository) GetUserByEmail(email string) (user model.User, err error) {
+	var db = r.db
+
+	const statement = `SELECT id FROM users WHERE email = $1`
+	row := db.QueryRowx(statement, email)
+	if err != nil {
+		return
+	}
+
+	err = row.Scan(&user.Id)
+	if err != nil {
+		return
+	}
+
+	return
+
+}
+
 func (r *repository) Logout(reqToken string) error {
 	var (
 		db = r.db
@@ -358,4 +382,67 @@ func (r *repository) CountTask(Id int) (model.Count, error) {
 	}
 
 	return count, err
+}
+
+func (r *repository) getUserIDByEmail(email string) (int, error) {
+	var (
+		userID int
+		db     = r.db
+	)
+	// Lakukan pencarian pengguna di database Anda
+	// Misalnya, jika menggunakan SQL:
+	query := "SELECT id FROM users WHERE email = $1"
+	err := db.QueryRow(query, email).Scan(&userID)
+	if err != nil {
+		return 0, err
+	}
+
+	return userID, nil
+}
+
+func (r *repository) StoreToken(token string, expirationTime time.Time, id int) (err error) {
+	var db = r.db
+	_, err = db.Exec("INSERT INTO token_forgot (user_id, token, expired_at) VALUES ($1, $2, $3)", id, token, expirationTime)
+	if err != nil {
+		return
+	}
+
+	return
+}
+
+func (r *repository) CekToken(token string) (data model.ForgotPassword, err error) {
+	var db = r.db
+
+	query := `SELECT user_id, expired_at FROM token_forgot WHERE token = $1`
+	err = db.QueryRow(query, token).Scan(&data.UserId, &data.ExpiredAt)
+	if err != nil {
+		return
+	}
+
+	return
+}
+
+func (r *repository) ResetPassword(Password string, Id int) error {
+	var db = r.db
+
+	query := `UPDATE users SET password = $1 WHERE id = $2`
+
+	_, err := db.Exec(query, Password, Id)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *repository) DeleteToken(token string) error {
+	var db = r.db
+
+	query := `DELETE FROM token_forgot WHERE  token = $1`
+	_, err := db.Exec(query, token)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
