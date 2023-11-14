@@ -16,7 +16,6 @@ import (
 	"Users/helpers"
 	"Users/model"
 	"Users/service"
-
 )
 
 type Controller struct {
@@ -72,20 +71,20 @@ func (c *Controller) CreateTasksController(ctx echo.Context) error {
 	// Menerima file gambar dari form dengan nama "image"
 	image, err := ctx.FormFile("image")
 	if err != nil {
-		return ctx.JSON(http.StatusBadRequest, map[string]string{"error": "Tidak dapat memproses file gambar"})
+		return ctx.JSON(http.StatusBadRequest, map[string]string{"error": "Could't procces image file"})
 	}
 
 	// Buka file yang diunggah
 	src, err := image.Open()
 	if err != nil {
-		return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "Gagal membuka file gambar"})
+		return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to open image"})
 	}
 	defer src.Close()
 
 	// Lokasi penyimpanan file gambar lokal
 	uploadDir := "uploads"
 	if err := os.MkdirAll(uploadDir, os.ModePerm); err != nil {
-		return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "Gagal membuat direktori penyimpanan"})
+		return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to create upload directory"})
 	}
 
 	// Generate nama file unik
@@ -94,13 +93,13 @@ func (c *Controller) CreateTasksController(ctx echo.Context) error {
 	// Membuka file tujuan untuk penyimpanan
 	dst, err := os.Create(dstPath)
 	if err != nil {
-		return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "Gagal membuat file gambar"})
+		return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed make image file"})
 	}
 	defer dst.Close()
 
 	// Salin isi file dari file asal ke file tujuan
 	if _, err = io.Copy(dst, src); err != nil {
-		return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "Gagal menyalin file gambar"})
+		return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to copy file image"})
 	}
 
 	// Membuat URL ke gambar yang diunggah
@@ -373,23 +372,23 @@ func (c *Controller) ForgotPasswordHandler(ctx echo.Context) error {
 	email := ctx.FormValue("email")
 
 	if email == "" {
-		return ctx.JSON(http.StatusBadRequest, map[string]string{"error": "Email tidak valid"})
+		return ctx.JSON(http.StatusBadRequest, map[string]string{"error": "Email not valid"})
 	}
 
 	user, err := c.service.GetUserByEmail(email)
 	if err != nil {
-		return ctx.JSON(http.StatusBadRequest, map[string]string{"error": "User tidak valid"})
+		return ctx.JSON(http.StatusBadRequest, map[string]string{"error": "User not valid"})
 	}
 
 	token, err := helpers.GenerateRandomToken(50)
 	if err != nil {
-		return ctx.JSON(http.StatusBadRequest, map[string]string{"error": "user tidak valid"})
+		return ctx.JSON(http.StatusBadRequest, map[string]string{"error": "user not valid"})
 	}
 
 	expireTime := time.Now().Add(1 * time.Hour)
 
 	if err := helpers.SendResetPasswordEmail(email, token); err != nil {
-		return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "Gagal mengirim email"})
+		return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "Fail sending email"})
 	}
 
 	err = c.service.StoreToken(token, expireTime, int(user.Id))
@@ -397,7 +396,7 @@ func (c *Controller) ForgotPasswordHandler(ctx echo.Context) error {
 		return err
 	}
 
-	return ctx.JSON(http.StatusOK, map[string]string{"message": fmt.Sprintf("Tautan reset password dikirim ke %s", email)})
+	return ctx.JSON(http.StatusOK, map[string]string{"message": fmt.Sprintf("Link reset has been send to %s", email)})
 }
 
 func (c *Controller) ResetPassword(ctx echo.Context) error {
