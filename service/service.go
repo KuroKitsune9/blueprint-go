@@ -1,11 +1,13 @@
 package service
 
 import (
+	"fmt"
 	"time"
 
 	"Users/helpers"
 	"Users/model"
 	"Users/repository"
+
 )
 
 type Service interface {
@@ -28,6 +30,7 @@ type Service interface {
 	CekToken(token string) (data model.ForgotPassword, err error)
 	ResetPassword(Password string, Id int) error
 	DeleteToken(token string) error
+	Migration() error
 }
 
 type service struct {
@@ -98,6 +101,15 @@ func (s *service) DeleteTask(Id int) error {
 func (s *service) BulkDeleteTask(taskIds []int, Id int) error {
 	err := s.repository.BulkDeleteTask(taskIds, Id)
 	if err != nil {
+		return err
+	}
+
+	return nil
+}
+func (s *service) Migration() error {
+	err := s.repository.CreateTableContoh()
+	if err != nil {
+		fmt.Println(err)
 		return err
 	}
 

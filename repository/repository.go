@@ -30,6 +30,7 @@ type Repository interface {
 	CekToken(token string) (data model.ForgotPassword, err error)
 	ResetPassword(Password string, Id int) error
 	DeleteToken(token string) error
+	CreateTableContoh() error
 }
 
 type repository struct {
@@ -202,6 +203,7 @@ func (r *repository) Regis(email string, HasPassword string) (model.UserRegisRes
 
 	return regis, nil
 }
+
 func (r *repository) Login(email string) (model.LoginRes, error) {
 	var db = r.db
 	var login = model.LoginRes{}
@@ -420,6 +422,20 @@ func (r *repository) CekToken(token string) (data model.ForgotPassword, err erro
 	}
 
 	return
+}
+
+func (r *repository) CreateTableContoh() error {
+	var db = r.db
+
+	query := `CREATE TABLE CONTOH (name varchar(255) NOT NULL)`
+
+	_, err := db.Exec(query)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+
+	return nil
 }
 
 func (r *repository) ResetPassword(Password string, Id int) error {

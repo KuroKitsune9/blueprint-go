@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"gopkg.in/gomail.v2"
-
 )
 
 func SendResetPasswordEmail(toEmail string, token string) error {

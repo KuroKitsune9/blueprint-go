@@ -12,7 +12,6 @@ import (
 	mid "Users/middleware"
 	"Users/repository"
 	"Users/service"
-
 )
 
 func Init() error {
@@ -52,6 +51,7 @@ func Init() error {
 	e.POST("/reset-password", controller.ResetPassword)
 	e.POST("/logout", controller.Logout)
 	e.POST("/register", controller.RegisterController)
+	e.POST("/migrations", controller.Migrations)
 
 	return e.Start(fmt.Sprintf(":%s", os.Getenv("SERVER_PORT")))
 }

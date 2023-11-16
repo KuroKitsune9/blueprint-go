@@ -16,6 +16,7 @@ import (
 	"Users/helpers"
 	"Users/model"
 	"Users/service"
+
 )
 
 type Controller struct {
@@ -279,6 +280,16 @@ func (c *Controller) Login(ctx echo.Context) error {
 	})
 }
 
+func (c *Controller) Migrations(ctx echo.Context) error {
+	err := c.service.Migration()
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+
+	return nil
+}
+
 func (c *Controller) Logout(ctx echo.Context) error {
 	var reqToken string
 	headerDataToken := ctx.Request().Header.Get("Authorization")
@@ -412,7 +423,7 @@ func (c *Controller) ResetPassword(ctx echo.Context) error {
 		return err
 	}
 
-	if !data.ExpiredAt.Before(time.Now()) {
+	if data.ExpiredAt.Before(time.Now()) {
 		return ctx.JSON(http.StatusUnauthorized, map[string]interface{}{
 			"message": "you are not allowed",
 		})
